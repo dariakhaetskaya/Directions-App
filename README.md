@@ -1,3 +1,12 @@
+# Directions App
+
+Website that allows you to search interesting places nearby your city, displays weather and coordinates.
+
+Type in your city to start exploring!
+
+[![Screenshot-from-2021-10-24-00-20-58.png](https://i.postimg.cc/fLrfqVGM/Screenshot-from-2021-10-24-00-20-58.png)](https://postimg.cc/5Y8z629r)
+
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
