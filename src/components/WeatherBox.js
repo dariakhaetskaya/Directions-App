@@ -1,8 +1,3 @@
-const weatherApi = {
-  key: "14dedf519011f34668bf4ff663d2aae5",
-  base: "https://api.openweathermap.org/data/2.5/"
-}
-
 function WeatherBox({coords, weather}){
 
     const dateBuilder = (d) => {
@@ -21,7 +16,6 @@ function WeatherBox({coords, weather}){
       <div>
         <div className="location-box">
           <div className="location"> {weather.name}, {weather.sys.country} </div>
-          {/* <div className="location"> {place.hits[0].name}, {place.hits[0].country} </div> */}
           <div className="date"> {dateBuilder(new Date())} </div>
           <div className="coords"> lng: {coords.lng} lat: {coords.lat}</div>
         </div>

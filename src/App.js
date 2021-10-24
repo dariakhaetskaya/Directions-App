@@ -1,98 +1,115 @@
-import React, { useState } from 'react';
+import React, {
+  useState
+} from 'react';
 import WeatherBox from './components/WeatherBox';
+import Attractions from './components/Attractions';
+
+
+import {
+  OPENWEATHER_API_KEY,
+  GRAPH_HOPPER_API_KEY,
+  OPENTRIP_MAP_API_KEY
+} from './config/keys';
 
 const weatherApi = {
-  key: "14dedf519011f34668bf4ff663d2aae5",
+  key: OPENWEATHER_API_KEY,
   base: "https://api.openweathermap.org/data/2.5/"
 }
 
 const geotagApi = {
-  key: "4deef5d4-34c1-4f49-aad5-356d38b1c004",
+  key: GRAPH_HOPPER_API_KEY,
   base: "https://graphhopper.com/api/1/"
 }
 
 const placesApi = {
-  key: "5ae2e3f221c38a28845f05b6c6f136e441693c38c216adc8d23c1487",
+  key: OPENTRIP_MAP_API_KEY,
   base: "https://api.opentripmap.com/0.1/en/"
 }
 
 function App() {
 
-  const[query, setQuery] = useState('');
-  const[weather, setWeather] = useState({});
-  const[attr, setAttr] = useState({});
-  const[coords, setCoords] = useState({});
-  const[placeDesc, setDesc] = useState({});
-  
-  function loadWeather(){
-      setCoords({});
+  const [query, setQuery] = useState('');
+  const [weather, setWeather] = useState({});
+  const [attr, setAttr] = useState({});
+  const [coords, setCoords] = useState({});
+  const [placeDesc, setDesc] = useState({});
+
+  const search = evt => {
+      if (evt.key === "Enter") {
+          setCoords({});
+
+          loadWeather();
+          let coordinates = loadCoordinades();
+          loadAttractions(coordinates);
+      }
+  }
+
+  function loadWeather() {
       fetch(`${weatherApi.base}weather?q=${query}&units=metric&APPID=${weatherApi.key}`)
-        .then(res => res.json())
-        .then(result => {
-          setWeather(result);
-          setQuery('');
+          .then(res => res.json())
+          .then(result => {
+              setWeather(result);
+          });
+  }
+
+  function loadCoordinades() {
+      let coordinates = new Promise((resolve, reject) => {
+          setTimeout(() => {
+              fetch(`${geotagApi.base}geocode?q=${query}&locale=en&key=${geotagApi.key}`)
+                  .then(res => res.json())
+                  .then(result => {
+                      setQuery('');
+                      resolve(result.hits[0]?.point);
+                  });
+          }, 100);
+      });
+      return coordinates;
+  }
+
+  function loadDescriptions(placesArray) {
+      placesArray.forEach(newPlace => {
+          console.log("xid", newPlace);
+          fetch(`${placesApi.base}places/xid/${newPlace}?apikey=${placesApi.key}`)
+              .then(res => res.json())
+              .then(result => {
+                  console.log("res", result);
+                  setDesc((prevDesc) => {
+                      return {
+                          ...prevDesc,
+                          [result.name]: result
+                      }
+                  });
+              });
       });
   }
 
-  function loadCoordinades(){
-    let coordinates = new Promise((resolve, reject) => {
-        setTimeout(() => {
-          fetch(`${geotagApi.base}geocode?q=${query}&locale=en&key=${geotagApi.key}`)
-          .then(res => res.json())
-          .then(result => {
-            setQuery('');
-            resolve(result.hits[0]?.point);
-            });
-        }, 100);
-    });
-    return coordinates;
-  }
+  function loadAttractions(coordinates){
+    coordinates
+      .then(
+          point => {
+            setCoords(point);
+            fetch(`${placesApi.base}places/radius?radius=1000&lon=${point?.lng}&lat=${point?.lat}&apikey=${placesApi.key}`)
+            .then(res => res.json())
+            .then(result => {
+              setAttr(result);
+              setQuery('');
 
-  const search = evt => {
-    if(evt.key === "Enter"){
-      loadWeather();
-      let coordinates = loadCoordinades();
-      var placesID;
-      
-      coordinates
-        .then(
-            point => {
-              setCoords(point);
-              fetch(`${placesApi.base}places/radius?radius=10000&lon=${point?.lng}&lat=${point?.lat}&apikey=${placesApi.key}`)
-              .then(res => res.json())
-              .then(result => {
-                setAttr(result);
-                setQuery('');
-
-                placesID = new Promise((resolve, reject) => {
-                  resolve(
-                    Array.from(result.features, feature => feature?.properties?.xid)
-                  )
-                });
-
-                placesID
-                  .then(
-                    placesArray => {
-                      console.log("placws arr", placesArray);
-                      placesArray.forEach(newPlace => {
-                        console.log("xid", newPlace);
-                        fetch(`${placesApi.base}places/xid/${newPlace}?apikey=${placesApi.key}`)
-                        .then(res => res.json())
-                        .then(result => {
-                          console.log("res", result);
-                          setDesc((prevDesc) => {return {...prevDesc, [result.name] : result}});
-                        });
-                      });
-                    }
-                  );
+              let placesID = new Promise((resolve, reject) => {
+                resolve(
+                  Array.from(result.features, feature => feature?.properties?.xid)
+                )
               });
-            }
-        );
 
-      console.log(placesID);
-
-      }
-    }
+              placesID
+                .then(
+                  placesArray => {
+                    loadDescriptions(placesArray);                    
+                  }
+                );
+            });
+          }
+      );
+  }  
 
   return (
     <div className="app">
@@ -115,17 +132,7 @@ function App() {
         }
 
         {("features" in attr) ? (
-          <div className="attractions">
-                Top places:
-                {[attr.features.map(
-                  (feature) =>
-                      <div className="place" key={feature.id}>
-                        {feature.properties.name}
-                        <div className="desc">{(placeDesc[feature?.properties?.name])?.wikipedia_extracts?.text}</div>
-                      </div>
-                )]}
-
-          </div>
+          <Attractions attr={attr} placeDesc={placeDesc}/>
         ) : (
           <div className="welcomePage">
             <div className="header">Find your city!</div>
