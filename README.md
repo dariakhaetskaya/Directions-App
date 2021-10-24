@@ -6,6 +6,7 @@ Type in your city to start exploring!
 
 [![Screenshot-from-2021-10-24-00-20-58.png](https://i.postimg.cc/fLrfqVGM/Screenshot-from-2021-10-24-00-20-58.png)](https://postimg.cc/5Y8z629r)
 
+Please note that you need to paste your own api keys to config/keys.js to start working
 
 # Getting Started with Create React App
 

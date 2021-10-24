@@ -30,7 +30,7 @@ function App() {
 
   const [query, setQuery] = useState('');
   const [weather, setWeather] = useState({});
-  const [attr, setAttr] = useState({});
+  const [attractions, setAttractions] = useState({});
   const [coords, setCoords] = useState({});
   const [placeDesc, setDesc] = useState({});
 
@@ -91,7 +91,7 @@ function App() {
             fetch(`${placesApi.base}places/radius?radius=1000&lon=${point?.lng}&lat=${point?.lat}&apikey=${placesApi.key}`)
             .then(res => res.json())
             .then(result => {
-              setAttr(result);
+              setAttractions(result);
               setQuery('');
 
               let placesID = new Promise((resolve, reject) => {
@@ -131,8 +131,8 @@ function App() {
           <span/>
         }
 
-        {("features" in attr) ? (
-          <Attractions attr={attr} placeDesc={placeDesc}/>
+        {("features" in attractions) ? (
+          <Attractions attr={attractions} placeDesc={placeDesc}/>
         ) : (
           <div className="welcomePage">
             <div className="header">Find your city!</div>
