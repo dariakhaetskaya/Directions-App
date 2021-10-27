@@ -1,30 +1,9 @@
-import React, {
-  useState
-} from 'react';
+import React, { useState } from 'react';
 import WeatherBox from './components/WeatherBox';
 import Attractions from './components/Attractions';
-
-
-import {
-  OPENWEATHER_API_KEY,
-  GRAPH_HOPPER_API_KEY,
-  OPENTRIP_MAP_API_KEY
-} from './config/keys';
-
-const weatherApi = {
-  key: OPENWEATHER_API_KEY,
-  base: "https://api.openweathermap.org/data/2.5/"
-}
-
-const geotagApi = {
-  key: GRAPH_HOPPER_API_KEY,
-  base: "https://graphhopper.com/api/1/"
-}
-
-const placesApi = {
-  key: OPENTRIP_MAP_API_KEY,
-  base: "https://api.opentripmap.com/0.1/en/"
-}
+import { openWeatherApi } from './apiHandling/openWeatherApi';
+import { geotagApi } from './apiHandling/geotagApi';
+import { openTripApi } from './apiHandling/openTripApi';
 
 function App() {
 
@@ -33,29 +12,46 @@ function App() {
   const [attractions, setAttractions] = useState({});
   const [coords, setCoords] = useState({});
   const [placeDesc, setDesc] = useState({});
+  const [places, setPlaces] = useState({});
+
+
+  let maxShown = 10;
+  let shownOnPage = 10;
+
+  // var placesArray;
+
+  const loadMore = () => {
+    maxShown += 10;
+    loadDescriptions(places);
+  }
 
   const search = evt => {
       if (evt.key === "Enter") {
           setCoords({});
-
-          loadWeather();
-          let coordinates = loadCoordinades();
-          loadAttractions(coordinates);
+          setAttractions({});
+          if (query.length > 0){
+            loadWeather();
+            let coordinates = loadCoordinades();
+            coordinates.then( point => loadAttractions(point));
+            // placesArray = Array.from(placesArray, feature => feature);
+            loadDescriptions(places);
+          }
+          
       }
   }
 
   function loadWeather() {
-      fetch(`${weatherApi.base}weather?q=${query}&units=metric&APPID=${weatherApi.key}`)
-          .then(res => res.json())
-          .then(result => {
-              setWeather(result);
-          });
+      openWeatherApi.fetchOpenWeatherApi(query)
+        .then(res => res.json())
+        .then(result => {
+            setWeather(result);
+        });
   }
 
   function loadCoordinades() {
       let coordinates = new Promise((resolve, reject) => {
           setTimeout(() => {
-              fetch(`${geotagApi.base}geocode?q=${query}&locale=en&key=${geotagApi.key}`)
+              geotagApi.fetchCoordinates(query)
                   .then(res => res.json())
                   .then(result => {
                       setQuery('');
@@ -67,48 +63,30 @@ function App() {
   }
 
   function loadDescriptions(placesArray) {
-      placesArray.forEach(newPlace => {
-          console.log("xid", newPlace);
-          fetch(`${placesApi.base}places/xid/${newPlace}?apikey=${placesApi.key}`)
-              .then(res => res.json())
-              .then(result => {
-                  console.log("res", result);
-                  setDesc((prevDesc) => {
-                      return {
-                          ...prevDesc,
-                          [result.name]: result
-                      }
-                  });
-              });
-      });
+      placesArray.slice(maxShown - shownOnPage, maxShown).forEach(newPlace => {
+          openTripApi.fetchDescription(newPlace)
+                .then(res => res.json())
+                .then(result => {
+                    setDesc((prevDesc) => {
+                        return {
+                            ...prevDesc,
+                            [result.name]: result
+                        }
+                    });
+                });
+          });
   }
 
-  function loadAttractions(coordinates){
-    coordinates
-      .then(
-          point => {
-            setCoords(point);
-            fetch(`${placesApi.base}places/radius?radius=1000&lon=${point?.lng}&lat=${point?.lat}&apikey=${placesApi.key}`)
-            .then(res => res.json())
-            .then(result => {
-              setAttractions(result);
-              setQuery('');
-
-              let placesID = new Promise((resolve, reject) => {
-                resolve(
-                  Array.from(result.features, feature => feature?.properties?.xid)
-                )
-              });
-
-              placesID
-                .then(
-                  placesArray => {
-                    loadDescriptions(placesArray);                    
-                  }
-                );
-            });
-          }
-      );
+  function loadAttractions(point){
+      setCoords(point);
+      openTripApi.fetchPlaces(point)
+      .then(res => res.json())
+      .then(result => {
+        if (!('error' in result)){
+          setAttractions(result);
+          setPlaces( arr => [ ... arr, Array.from(attractions?.features, feature => feature?.properties?.xid)]);                    
+        }
+      });
   }  
 
   return (
@@ -124,21 +102,29 @@ function App() {
             onKeyPress={search}
             />
         </div>
-        {("main" in weather)
+        {('main' in weather)
           ? 
           <WeatherBox coords={coords} weather={weather}/>
           :
           <span/>
         }
 
-        {("features" in attractions) ? (
-          <Attractions attr={attractions} placeDesc={placeDesc}/>
+        {('features' in attractions) ? (
+          <div>
+            <Attractions attr={attractions} placeDesc={placeDesc} maxShown={maxShown} shownOnPage={shownOnPage}/>
+            
+            <button onClick={loadMore}>
+              Load More...
+            </button>
+          </div>
         ) : (
           <div className="welcomePage">
             <div className="header">Find your city!</div>
             <div>This website desplays weather, attractions and coordinates of given place. Type in a place to explore it!</div>
-            </div>
+          </div>
         )}
+
+        
       
       </main>
     </div>
