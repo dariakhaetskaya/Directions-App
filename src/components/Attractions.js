@@ -1,8 +1,8 @@
-function Attractions({attr, placeDesc, maxShown, shownOnPage}){
+function Attractions({attr, placeDesc, maxShown}){
     return(
         <div className="attractions">
                 Top places:
-                {[(attr.features).slice(maxShown - shownOnPage, maxShown).map(
+                {[(attr.features).slice(0, maxShown).map(
                   (feature) =>
                       <div className="place" key={feature.id}>
                         {feature.properties.name}
